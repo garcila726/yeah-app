@@ -82,7 +82,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="px-4 sm:px-6 py-6">
+    <div className="min-h-screen bg-gray-100 text-[#0e5d6d] px-4 sm:px-6 py-6">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
         <h1 className="text-3xl font-bold text-primary text-center sm:text-left">
           Eventos YEAH
@@ -155,12 +155,12 @@ export default function DashboardPage() {
 
       <hr className="my-10 border-t-2 border-secondary" />
 
-      <div className="mt-10 bg-gray-100 p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
+      <div className="mt-10 bg-white p-6 rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold mb-6 text-primary text-center">
           🎁 Beneficios exclusivos
         </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div className="bg-white p-4 rounded-xl shadow">
+          <div className="bg-gray-100 p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-secondary">
               10% de descuento en cursos de inglés
             </h3>
@@ -168,13 +168,13 @@ export default function DashboardPage() {
               Válido en escuelas aliadas.
             </p>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow">
+          <div className="bg-gray-100 p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-secondary">Eventos VIP</h3>
             <p className="text-sm text-gray-600">
               Invitaciones prioritarias para eventos YEAH.
             </p>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow">
+          <div className="bg-gray-100 p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-secondary">
               Regalos mensuales
             </h3>
@@ -185,8 +185,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-10 text-center bg-gray-100 p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">
+      <div className="mt-10 text-center bg-white p-6 rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold mb-4 text-primary">
           📲 Síguenos en redes
         </h2>
         <div className="flex justify-center gap-6 text-2xl">
