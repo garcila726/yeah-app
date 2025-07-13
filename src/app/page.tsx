@@ -1,7 +1,14 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-900 text-white">
-      <h1 className="text-3xl font-bold">¡TailwindCSS funcionando!</h1>
-    </main>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push("/login");
+  }, [router]);
+
+  return null;
 }
