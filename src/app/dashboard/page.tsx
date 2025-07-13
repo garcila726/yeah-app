@@ -141,17 +141,18 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-4">
-        {events.map((event) => (
-          <div
-            key={event.id}
-            className="bg-secondary text-white p-4 rounded-xl shadow"
-          >
-            <h3 className="text-xl font-bold">{event.title}</h3>
-            <p>{event.description}</p>
-            <p className="text-sm">{event.date}</p>
-          </div>
-        ))}
-      </div>
+  {events.map((event) => (
+    <div
+      key={event.id}
+      className="bg-white text-[#0e5d6d] p-4 rounded-xl shadow"
+    >
+      <h3 className="text-xl font-bold">{event.title}</h3>
+      <p>{event.description}</p>
+      <p className="text-sm text-gray-500">{event.date}</p>
+    </div>
+  ))}
+</div>
+
 
       <hr className="my-10 border-t-2 border-secondary" />
 
