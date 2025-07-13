@@ -16,10 +16,20 @@ export default function DashboardPage() {
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [role, setRole] = useState<"admin" | "student" | null>(null);
+const [userName, setUserName] = useState<string | null>(null);
+
+const fetchUserName = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const name = user.user_metadata?.name || user.email;
+    setUserName(name);
+  }
+};
 
   useEffect(() => {
     fetchRole();
     fetchEvents();
+    fetchUserName();
   }, []);
 
   const fetchRole = async () => {
@@ -41,9 +51,12 @@ export default function DashboardPage() {
   };
 
   const fetchEvents = async () => {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
     const { data, error } = await supabase
       .from("events")
       .select("*")
+      .gte("date", today)
       .order("date", { ascending: true });
 
     if (error) {
@@ -82,11 +95,17 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 text-[#0e5d6d] px-4 sm:px-6 py-6">
+    <div className="px-4 sm:px-6 py-6">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
         <h1 className="text-3xl font-bold text-primary text-center sm:text-left">
           Eventos YEAH
         </h1>
+        {userName && (
+  <p className="text-lg text-[#2a96af] mb-2 text-center sm:text-left">
+    Bienvenido, <span className="font-semibold">{userName}</span> 👋
+  </p>
+)}
+
         <button
           onClick={handleLogout}
           className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 text-sm"
@@ -140,28 +159,37 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4">
-  {events.map((event) => (
-    <div
-      key={event.id}
-      className="bg-white text-[#0e5d6d] p-4 rounded-xl shadow"
-    >
-      <h3 className="text-xl font-bold">{event.title}</h3>
-      <p>{event.description}</p>
-      <p className="text-sm text-gray-500">{event.date}</p>
-    </div>
-  ))}
-</div>
+      <h2 className="text-2xl font-bold mb-4 text-[#0e5d6d] text-center sm:text-left">
+        🗓 Próximos eventos
+      </h2>
 
+      {events.length === 0 ? (
+        <p className="text-center text-gray-500">
+          No hay eventos registrados por ahora.
+        </p>
+      ) : (
+        <div className="grid gap-4">
+          {events.map((event) => (
+            <div
+              key={event.id}
+              className="bg-white text-[#0e5d6d] p-4 rounded-xl shadow"
+            >
+              <h3 className="text-xl font-bold">{event.title}</h3>
+              <p>{event.description}</p>
+              <p className="text-sm text-gray-500">{event.date}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <hr className="my-10 border-t-2 border-secondary" />
 
-      <div className="mt-10 bg-white p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-6 text-primary text-center">
+      <div className="mt-10 bg-gray-100 p-6 rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
           🎁 Beneficios exclusivos
         </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div className="bg-gray-100 p-4 rounded-xl shadow">
+          <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-secondary">
               10% de descuento en cursos de inglés
             </h3>
@@ -169,13 +197,13 @@ export default function DashboardPage() {
               Válido en escuelas aliadas.
             </p>
           </div>
-          <div className="bg-gray-100 p-4 rounded-xl shadow">
+          <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-secondary">Eventos VIP</h3>
             <p className="text-sm text-gray-600">
               Invitaciones prioritarias para eventos YEAH.
             </p>
           </div>
-          <div className="bg-gray-100 p-4 rounded-xl shadow">
+          <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-secondary">
               Regalos mensuales
             </h3>
@@ -186,8 +214,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-10 text-center bg-white p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-primary">
+      <div className="mt-10 text-center bg-gray-100 p-6 rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">
           📲 Síguenos en redes
         </h2>
         <div className="flex justify-center gap-6 text-2xl">
