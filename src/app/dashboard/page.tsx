@@ -111,7 +111,7 @@ export default function DashboardPage() {
   return (
     <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-        <h1 className="text-3xl font-bold text-primary text-center sm:text-left">
+        <h1 className="text-3xl font-bold text-[#0e5d6d] text-center sm:text-left">
           Eventos YEAH
         </h1>
         <button
@@ -124,7 +124,7 @@ export default function DashboardPage() {
 
       {role && (
         <p className="text-sm text-gray-700 mb-6 text-center sm:text-left">
-          Rol actual:{" "}
+          Rol actual: {" "}
           <span
             className={`font-semibold ${
               role === "admin" ? "text-green-600" : "text-blue-600"
@@ -161,7 +161,7 @@ export default function DashboardPage() {
             onChange={(e) => setDate(e.target.value)}
           />
           <button
-            className="bg-primary text-white px-4 py-2 rounded w-full sm:w-auto"
+            className="bg-[#0e5d6d] text-white px-4 py-2 rounded w-full sm:w-auto"
             onClick={handleAddEvent}
           >
             {editingId ? "Guardar cambios" : "Agregar Evento"}
@@ -190,7 +190,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <hr className="my-10 border-t-2 border-secondary" />
+      <hr className="my-10 border-t-2 border-[#2a96af]" />
 
       <div className="mt-10 bg-gray-200 p-6 rounded-2xl shadow-md">
         <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
@@ -198,7 +198,7 @@ export default function DashboardPage() {
         </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="bg-white p-4 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-secondary">
+            <h3 className="text-lg font-bold text-[#2a96af]">
               10% de descuento en cursos de inglés
             </h3>
             <p className="text-sm text-gray-600">
@@ -206,13 +206,13 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-secondary">Eventos VIP</h3>
+            <h3 className="text-lg font-bold text-[#2a96af]">Eventos VIP</h3>
             <p className="text-sm text-gray-600">
               Invitaciones prioritarias para eventos YEAH.
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-secondary">
+            <h3 className="text-lg font-bold text-[#2a96af]">
               Regalos mensuales
             </h3>
             <p className="text-sm text-gray-600">
@@ -248,7 +248,11 @@ export default function DashboardPage() {
           >
             💬
           </a>
-          <a href="https://www.youtube.com/@yeaheducation5334" target="_blank" rel="noreferrer">
+          <a
+            href="https://www.youtube.com/@yeaheducation5334"
+            target="_blank"
+            rel="noreferrer"
+          >
             ▶️
           </a>
         </div>
