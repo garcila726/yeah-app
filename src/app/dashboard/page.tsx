@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { motion } from "framer-motion";
 
 interface Event {
   id: string;
@@ -41,7 +42,8 @@ export default function DashboardPage() {
   };
 
   const fetchEvents = async () => {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0];
+
     const { data, error } = await supabase
       .from("events")
       .select("*")
@@ -57,11 +59,7 @@ export default function DashboardPage() {
 
   const handleAddEvent = async () => {
     const { error } = await supabase.from("events").insert([
-      {
-        title,
-        description,
-        date,
-      },
+      { title, description, date },
     ]);
 
     if (error) {
@@ -84,7 +82,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 px-4 sm:px-6 py-6">
+    <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen text-gray-800">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
         <h1 className="text-3xl font-bold text-primary text-center sm:text-left">
           Eventos YEAH
@@ -142,81 +140,104 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 mb-10">
-        {events.map((event) => (
-          <div
-            key={event.id}
-            className="bg-white text-gray-900 p-4 rounded-xl shadow"
-          >
-            <h3 className="text-xl font-bold">{event.title}</h3>
-            <p>{event.description}</p>
-            <p className="text-sm text-gray-500">{event.date}</p>
-          </div>
-        ))}
+      {/* Eventos */}
+      <div className="grid gap-4">
+        {events.length > 0 ? (
+          events.map((event) => (
+            <div
+              key={event.id}
+              className="bg-white text-gray-800 p-4 rounded-xl shadow"
+            >
+              <h3 className="text-xl font-bold">{event.title}</h3>
+              <p>{event.description}</p>
+              <p className="text-sm">{event.date}</p>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500">No hay eventos próximos</p>
+        )}
       </div>
 
       <hr className="my-10 border-t-2 border-secondary" />
 
-      <div className="mt-10 bg-white p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-6 text-secondary text-center">
+      {/* Beneficios con animación */}
+      <div className="mt-10 bg-gray-100 p-6 rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
           🎁 Beneficios exclusivos
         </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div className="bg-gray-100 p-4 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-secondary">
-              10% de descuento en cursos de inglés
-            </h3>
-            <p className="text-sm text-gray-600">
-              Válido en escuelas aliadas.
-            </p>
-          </div>
-          <div className="bg-gray-100 p-4 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-secondary">Eventos VIP</h3>
-            <p className="text-sm text-gray-600">
-              Invitaciones prioritarias para eventos YEAH.
-            </p>
-          </div>
-          <div className="bg-gray-100 p-4 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-secondary">
-              Regalos mensuales
-            </h3>
-            <p className="text-sm text-gray-600">
-              Sorteos entre estudiantes activos 🎉
-            </p>
-          </div>
+          {[
+            {
+              title: "10% de descuento en cursos de inglés",
+              text: "Válido en escuelas aliadas.",
+            },
+            {
+              title: "Eventos VIP",
+              text: "Invitaciones prioritarias para eventos YEAH.",
+            },
+            {
+              title: "Regalos mensuales",
+              text: "Sorteos entre estudiantes activos 🎉",
+            },
+          ].map((item, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: idx * 0.2 }}
+              className="bg-white p-4 rounded-xl shadow"
+            >
+              <h3 className="text-lg font-bold text-secondary">{item.title}</h3>
+              <p className="text-sm text-gray-600">{item.text}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
 
-      <div className="mt-10 text-center bg-white p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-secondary">
+      {/* Redes sociales con animación */}
+      <div className="mt-10 text-center bg-gray-100 p-6 rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">
           📲 Síguenos en redes
         </h2>
-        <div className="flex justify-center gap-6 text-2xl">
-          <a
+        <motion.div
+          className="flex justify-center gap-6 text-2xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <motion.a
+            whileHover={{ scale: 1.2 }}
             href="https://www.instagram.com/yeahglobaleducation/"
             target="_blank"
             rel="noreferrer"
           >
             📸
-          </a>
-          <a
-            href="https://tiktok.com/@yeah"
+          </motion.a>
+          <motion.a
+            whileHover={{ scale: 1.2 }}
+            href="https://www.tiktok.com/@yeahglobaleducation"
             target="_blank"
             rel="noreferrer"
           >
             🎵
-          </a>
-          <a
+          </motion.a>
+          <motion.a
+            whileHover={{ scale: 1.2 }}
             href="https://wa.me/123456789"
             target="_blank"
             rel="noreferrer"
           >
             💬
-          </a>
-          <a href="https://www.youtube.com/@yeaheducation5334" target="_blank" rel="noreferrer">
+          </motion.a>
+          <motion.a
+            whileHover={{ scale: 1.2 }}
+            href="https://www.youtube.com/@yeaheducation5334"
+            target="_blank"
+            rel="noreferrer"
+          >
             ▶️
-          </a>
-        </div>
+          </motion.a>
+        </motion.div>
       </div>
     </div>
   );
