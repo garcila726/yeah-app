@@ -242,7 +242,7 @@ export default function DashboardPage() {
             🎵
           </a>
           <a
-            href="https://wa.me/123456789"
+            href="https://wa.me/+61424075119"
             target="_blank"
             rel="noreferrer"
           >
