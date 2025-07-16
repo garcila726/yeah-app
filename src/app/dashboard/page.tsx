@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
 
+  // 🔄 Fetch del usuario y eventos al cargar
   useEffect(() => {
     fetchUserAndRole();
     fetchEvents();
@@ -36,11 +37,8 @@ export default function DashboardPage() {
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Error fetching role:", error.message);
-      } else {
-        setRole(data?.role);
-      }
+      if (error) console.error("Error fetching role:", error.message);
+      else setRole(data?.role);
     }
   };
 
@@ -52,42 +50,24 @@ export default function DashboardPage() {
       .gte("date", today)
       .order("date", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching events:", error.message);
-    } else {
-      setEvents(data || []);
-    }
+    if (error) console.error("Error fetching events:", error.message);
+    else setEvents(data || []);
   };
 
   const handleAddEvent = async () => {
-    if (editingId) {
-      const { error } = await supabase
-        .from("events")
-        .update({ title, description, date })
-        .eq("id", editingId);
+    const values = { title, description, date };
 
-      if (error) {
-        console.error("Error actualizando evento:", error.message);
-      } else {
-        setEditingId(null);
-        setTitle("");
-        setDescription("");
-        setDate("");
-        fetchEvents();
-      }
-    } else {
-      const { error } = await supabase.from("events").insert([
-        { title, description, date },
-      ]);
+    const { error } = editingId
+      ? await supabase.from("events").update(values).eq("id", editingId)
+      : await supabase.from("events").insert([values]);
 
-      if (error) {
-        console.error("Error agregando evento:", error.message);
-      } else {
-        setTitle("");
-        setDescription("");
-        setDate("");
-        fetchEvents();
-      }
+    if (error) console.error("Error guardando evento:", error.message);
+    else {
+      setTitle("");
+      setDescription("");
+      setDate("");
+      setEditingId(null);
+      fetchEvents();
     }
   };
 
@@ -100,15 +80,15 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error al cerrar sesión:", error.message);
-    } else {
-      window.location.href = "/";
-    }
+    if (!error) window.location.href = "/";
+    else console.error("Error al cerrar sesión:", error.message);
   };
 
+  // 🧱 Estructura visual
   return (
     <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen">
+
+      {/* Encabezado con saludo y logo */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl sm:text-2xl font-bold text-[#0e5d6d]">
@@ -123,14 +103,15 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={handleLogout}
-          className="bg-[#c83b94] text-white px-4 py-2 rounded hover:bg-pink-700 text-sm"
+          className="bg-[#c83b94] text-white px-4 py-1 rounded hover:bg-[#a72d7a] text-sm"
         >
           Cerrar sesión
         </button>
       </div>
 
+      {/* Rol actual */}
       {role && (
-        <p className="text-sm text-gray-700 mb-6 text-center sm:text-left">
+        <p className="text-sm text-gray-700 mb-4 text-center sm:text-left">
           Rol actual:{" "}
           <span
             className={`font-semibold ${
@@ -142,6 +123,12 @@ export default function DashboardPage() {
         </p>
       )}
 
+      {/* Título: Eventos */}
+      <h2 className="text-2xl font-bold mb-4 text-[#0e5d6d] text-center">
+        📅 Eventos
+      </h2>
+
+      {/* Sección admin: agregar/editar evento */}
       {role === "admin" && (
         <div className="bg-white p-4 rounded-xl shadow mb-6">
           <h2 className="text-xl font-semibold mb-2">
@@ -150,25 +137,25 @@ export default function DashboardPage() {
           <input
             type="text"
             placeholder="Título"
-            className="border p-2 w-full mb-2 rounded"
+            className="border p-2 w-full mb-2 rounded text-gray-800"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
           <input
             type="text"
             placeholder="Descripción"
-            className="border p-2 w-full mb-2 rounded"
+            className="border p-2 w-full mb-2 rounded text-gray-800"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
           <input
             type="date"
-            className="border p-2 w-full mb-2 rounded"
+            className="border p-2 w-full mb-2 rounded text-gray-800"
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
           <button
-            className="bg-[#c83b94] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-pink-700"
+            className="bg-[#c83b94] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-[#a72d7a]"
             onClick={handleAddEvent}
           >
             {editingId ? "Guardar cambios" : "Agregar Evento"}
@@ -176,6 +163,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Lista de eventos */}
       <div className="grid gap-4">
         {events.map((event) => (
           <div
@@ -199,6 +187,7 @@ export default function DashboardPage() {
 
       <hr className="my-10 border-t-2 border-[#2a96af]" />
 
+      {/* Sección beneficios */}
       <div className="mt-10 bg-gray-200 p-6 rounded-2xl shadow-md">
         <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
           🎁 Beneficios exclusivos
@@ -229,6 +218,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Redes sociales */}
       <div className="mt-10 text-center bg-gray-200 p-6 rounded-2xl shadow-md">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">
           📲 Síguenos en redes
