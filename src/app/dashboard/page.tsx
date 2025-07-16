@@ -20,7 +20,6 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
 
-  // 🔄 Fetch del usuario y eventos al cargar
   useEffect(() => {
     fetchUserAndRole();
     fetchEvents();
@@ -37,8 +36,11 @@ export default function DashboardPage() {
         .eq("id", user.id)
         .single();
 
-      if (error) console.error("Error fetching role:", error.message);
-      else setRole(data?.role);
+      if (error) {
+        console.error("Error fetching role:", error.message);
+      } else {
+        setRole(data?.role);
+      }
     }
   };
 
@@ -50,24 +52,42 @@ export default function DashboardPage() {
       .gte("date", today)
       .order("date", { ascending: true });
 
-    if (error) console.error("Error fetching events:", error.message);
-    else setEvents(data || []);
+    if (error) {
+      console.error("Error fetching events:", error.message);
+    } else {
+      setEvents(data || []);
+    }
   };
 
   const handleAddEvent = async () => {
-    const values = { title, description, date };
+    if (editingId) {
+      const { error } = await supabase
+        .from("events")
+        .update({ title, description, date })
+        .eq("id", editingId);
 
-    const { error } = editingId
-      ? await supabase.from("events").update(values).eq("id", editingId)
-      : await supabase.from("events").insert([values]);
+      if (error) {
+        console.error("Error actualizando evento:", error.message);
+      } else {
+        setEditingId(null);
+        setTitle("");
+        setDescription("");
+        setDate("");
+        fetchEvents();
+      }
+    } else {
+      const { error } = await supabase.from("events").insert([
+        { title, description, date },
+      ]);
 
-    if (error) console.error("Error guardando evento:", error.message);
-    else {
-      setTitle("");
-      setDescription("");
-      setDate("");
-      setEditingId(null);
-      fetchEvents();
+      if (error) {
+        console.error("Error agregando evento:", error.message);
+      } else {
+        setTitle("");
+        setDescription("");
+        setDate("");
+        fetchEvents();
+      }
     }
   };
 
@@ -80,15 +100,15 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (!error) window.location.href = "/";
-    else console.error("Error al cerrar sesión:", error.message);
+    if (error) {
+      console.error("Error al cerrar sesión:", error.message);
+    } else {
+      window.location.href = "/";
+    }
   };
 
-  // 🧱 Estructura visual
   return (
     <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen">
-
-      {/* Encabezado con saludo y logo */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl sm:text-2xl font-bold text-[#0e5d6d]">
@@ -109,9 +129,8 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Rol actual */}
       {role && (
-        <p className="text-sm text-gray-700 mb-4 text-center sm:text-left">
+        <p className="text-sm text-gray-700 mb-6 text-center sm:text-left">
           Rol actual:{" "}
           <span
             className={`font-semibold ${
@@ -123,34 +142,32 @@ export default function DashboardPage() {
         </p>
       )}
 
-      {/* Título: Eventos */}
-      <h2 className="text-2xl font-bold mb-4 text-[#0e5d6d] text-center">
-        📅 Eventos
+      <h2 className="text-2xl font-bold text-[#0e5d6d] mb-4">
+        📆 Eventos
       </h2>
 
-      {/* Sección admin: agregar/editar evento */}
       {role === "admin" && (
         <div className="bg-white p-4 rounded-xl shadow mb-6">
-          <h2 className="text-xl font-semibold mb-2">
+          <h3 className="text-xl font-semibold mb-2">
             {editingId ? "Editar evento" : "Agregar nuevo evento"}
-          </h2>
+          </h3>
           <input
             type="text"
             placeholder="Título"
-            className="border p-2 w-full mb-2 rounded text-gray-800"
+            className="border p-2 w-full mb-2 rounded text-gray-800 bg-white"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
           <input
             type="text"
             placeholder="Descripción"
-            className="border p-2 w-full mb-2 rounded text-gray-800"
+            className="border p-2 w-full mb-2 rounded text-gray-800 bg-white"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
           <input
             type="date"
-            className="border p-2 w-full mb-2 rounded text-gray-800"
+            className="border p-2 w-full mb-2 rounded text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c83b94] focus:border-transparent"
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
@@ -163,7 +180,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Lista de eventos */}
       <div className="grid gap-4">
         {events.map((event) => (
           <div
@@ -187,7 +203,6 @@ export default function DashboardPage() {
 
       <hr className="my-10 border-t-2 border-[#2a96af]" />
 
-      {/* Sección beneficios */}
       <div className="mt-10 bg-gray-200 p-6 rounded-2xl shadow-md">
         <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
           🎁 Beneficios exclusivos
@@ -218,7 +233,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Redes sociales */}
       <div className="mt-10 text-center bg-gray-200 p-6 rounded-2xl shadow-md">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">
           📲 Síguenos en redes
