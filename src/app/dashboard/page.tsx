@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import Image from "next/image";
 
 interface Event {
   id: string;
@@ -17,16 +18,18 @@ export default function DashboardPage() {
   const [date, setDate] = useState("");
   const [role, setRole] = useState<"admin" | "student" | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
 
   useEffect(() => {
-    fetchRole();
+    fetchUserAndRole();
     fetchEvents();
   }, []);
 
-  const fetchRole = async () => {
+  const fetchUserAndRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
+      setUserEmail(user.email || "");
       const { data, error } = await supabase
         .from("users")
         .select("role")
@@ -74,11 +77,7 @@ export default function DashboardPage() {
       }
     } else {
       const { error } = await supabase.from("events").insert([
-        {
-          title,
-          description,
-          date,
-        },
+        { title, description, date },
       ]);
 
       if (error) {
@@ -110,13 +109,21 @@ export default function DashboardPage() {
 
   return (
     <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-        <h1 className="text-3xl font-bold text-[#0e5d6d] text-center sm:text-left">
-          Eventos YEAH
-        </h1>
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#0e5d6d]">
+            Bienvenido, {userEmail}
+          </h1>
+          <Image
+            src="/isologo-yeah.png"
+            alt="Isologo Yeah"
+            width={40}
+            height={40}
+          />
+        </div>
         <button
           onClick={handleLogout}
-          className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 text-sm"
+          className="bg-[#c83b94] text-white px-4 py-2 rounded hover:bg-pink-700 text-sm"
         >
           Cerrar sesión
         </button>
@@ -124,7 +131,7 @@ export default function DashboardPage() {
 
       {role && (
         <p className="text-sm text-gray-700 mb-6 text-center sm:text-left">
-          Rol actual: {" "}
+          Rol actual:{" "}
           <span
             className={`font-semibold ${
               role === "admin" ? "text-green-600" : "text-blue-600"
@@ -161,7 +168,7 @@ export default function DashboardPage() {
             onChange={(e) => setDate(e.target.value)}
           />
           <button
-            className="bg-[#0e5d6d] text-white px-4 py-2 rounded w-full sm:w-auto"
+            className="bg-[#c83b94] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-pink-700"
             onClick={handleAddEvent}
           >
             {editingId ? "Guardar cambios" : "Agregar Evento"}
