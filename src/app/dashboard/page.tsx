@@ -142,7 +142,7 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <h2 className="text-2xl font-bold text-[#0e5d6d] mb-4">
+      <h2 className="text-2xl font-bold mb-4 text-black text-center flex items-center justify-center gap-2">
         📆 Eventos
       </h2>
 
@@ -166,18 +166,17 @@ export default function DashboardPage() {
             onChange={(e) => setDescription(e.target.value)}
           />
           
-          <div className="relative mb-2">
-            <input
-            type="date"
-            className="appearance-none border p-2 pr-10 w-full rounded text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c83b94] focus:border-transparent"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-          <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-            📅
-          </div>
+         <div className="relative mb-2">
+          <input
+           type="date"
+           className="appearance-none border p-2 pr-10 w-full rounded text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c83b94] focus:border-transparent"
+           value={date}
+           onChange={(e) => setDate(e.target.value)}
+         />
+         <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 text-sm">
+           📅
+         </div>
        </div>
-       
 
           <button
             className="bg-[#c83b94] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-[#a72d7a]"
