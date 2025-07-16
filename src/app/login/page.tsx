@@ -63,7 +63,7 @@ export default function LoginPage() {
 
         <button
           onClick={handleLogin}
-          className="w-full bg-[#0e5d6d] hover:bg-[#2a96af] text-white py-2 px-4 rounded transition duration-300"
+          className="w-full bg-[#c83b94] text-white p-2 rounded hover:bg-[#a72d7a]"
         >
           Entrar
         </button>
