@@ -178,6 +178,7 @@ export default function DashboardPage() {
           </div>
        </div>
        
+
           <button
             className="bg-[#c83b94] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-[#a72d7a]"
             onClick={handleAddEvent}
