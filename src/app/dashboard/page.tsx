@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import QrReader from "react-qr-reader";
 
 interface Event {
   id: string;
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [role, setRole] = useState<"admin" | "student" | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     fetchUserAndRole();
@@ -26,7 +28,9 @@ export default function DashboardPage() {
   }, []);
 
   const fetchUserAndRole = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (user) {
       setUserEmail(user.email || "");
@@ -98,6 +102,44 @@ export default function DashboardPage() {
     setDate(event.date);
   };
 
+  const handleAttendance = async (eventId: string, status: string) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Debes iniciar sesión.");
+      return;
+    }
+
+    const { error } = await supabase.from("attendance").upsert({
+      user_id: user.id,
+      event_id: eventId,
+      status: status,
+      timestamp: null,
+      points_awarded: null,
+    });
+
+    if (error) {
+      console.error("Error registrando asistencia:", error.message);
+      alert("No se pudo registrar la asistencia.");
+    } else {
+      alert("¡Tu respuesta ha sido registrada!");
+    }
+  };
+
+  const handleScan = async (data: string | null) => {
+    if (data) {
+      const eventId = data;
+      handleAttendance(eventId, "confirmed");
+      setShowQR(false);
+    }
+  };
+
+  const handleError = (err: any) => {
+    console.error("Error escaneando código QR:", err);
+  };
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -114,12 +156,7 @@ export default function DashboardPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-[#0e5d6d]">
             Bienvenido, {userEmail}
           </h1>
-          <Image
-            src="/isologo-yeah.png"
-            alt="Isologo Yeah"
-            width={40}
-            height={40}
-          />
+          <Image src="/isologo-yeah.png" alt="Isologo Yeah" width={40} height={40} />
         </div>
         <button
           onClick={handleLogout}
@@ -131,7 +168,7 @@ export default function DashboardPage() {
 
       {role && (
         <p className="text-sm text-gray-700 mb-6 text-center sm:text-left">
-          Rol actual:{" "}
+          Rol actual: {" "}
           <span
             className={`font-semibold ${
               role === "admin" ? "text-green-600" : "text-blue-600"
@@ -165,19 +202,17 @@ export default function DashboardPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          
-         <div className="relative mb-2">
-          <input
-           type="date"
-           className="appearance-none border p-2 pr-10 w-full rounded text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c83b94] focus:border-transparent"
-           value={date}
-           onChange={(e) => setDate(e.target.value)}
-         />
-         <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 text-sm">
-           📅
-         </div>
-       </div>
-
+          <div className="relative mb-2">
+            <input
+              type="date"
+              className="appearance-none border p-2 pr-10 w-full rounded text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c83b94] focus:border-transparent"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 text-sm">
+              📅
+            </div>
+          </div>
           <button
             className="bg-[#c83b94] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-[#a72d7a]"
             onClick={handleAddEvent}
@@ -189,10 +224,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-4">
         {events.map((event) => (
-          <div
-            key={event.id}
-            className="bg-white text-gray-800 p-4 rounded-xl shadow"
-          >
+          <div key={event.id} className="bg-white text-gray-800 p-4 rounded-xl shadow">
             <h3 className="text-xl font-bold">{event.title}</h3>
             <p>{event.description}</p>
             <p className="text-sm">{event.date}</p>
@@ -204,9 +236,46 @@ export default function DashboardPage() {
                 Editar
               </button>
             )}
+            {role === "student" && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  onClick={() => handleAttendance(event.id, "pending")}
+                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                >
+                  Asistiré
+                </button>
+                <button
+                  onClick={() => handleAttendance(event.id, "rejected")}
+                  className="bg-gray-400 text-white px-3 py-1 rounded text-sm hover:bg-gray-500"
+                >
+                  No puedo
+                </button>
+                <button
+                  onClick={() => setShowQR(true)}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                >
+                  Escanear QR
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
+
+      {showQR && (
+        <div className="mt-6 flex justify-center">
+          <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
+            <h3 className="text-center text-lg font-semibold mb-4">Escanea el código QR</h3>
+            <QrReader delay={300} onError={handleError} onScan={handleScan} style={{ width: "100%" }} />
+            <button
+              onClick={() => setShowQR(false)}
+              className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <hr className="my-10 border-t-2 border-[#2a96af]" />
 
@@ -219,9 +288,7 @@ export default function DashboardPage() {
             <h3 className="text-lg font-bold text-[#2a96af]">
               10% de descuento en cursos de inglés
             </h3>
-            <p className="text-sm text-gray-600">
-              Válido en escuelas aliadas.
-            </p>
+            <p className="text-sm text-gray-600">Válido en escuelas aliadas.</p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-[#2a96af]">Eventos VIP</h3>
@@ -230,9 +297,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-[#2a96af]">
-              Regalos mensuales
-            </h3>
+            <h3 className="text-lg font-bold text-[#2a96af]">Regalos mensuales</h3>
             <p className="text-sm text-gray-600">
               Sorteos entre estudiantes activos 🎉
             </p>
@@ -241,9 +306,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-10 text-center bg-gray-200 p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">
-          📲 Síguenos en redes
-        </h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">📲 Síguenos en redes</h2>
         <div className="flex justify-center gap-6 text-2xl">
           <a
             href="https://www.instagram.com/yeahglobaleducation/"
