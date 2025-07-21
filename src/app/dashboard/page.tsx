@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
-import dynamic from "next/dynamic";
-
-const QrScanner = dynamic(() => import("react-qr-scanner"), { ssr: false });
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 interface Event {
   id: string;
@@ -23,11 +21,20 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [showQR, setShowQR] = useState(false);
+  const scannerRef = useRef<any>(null);
 
   useEffect(() => {
     fetchUserAndRole();
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    if (showQR) {
+      startScanner();
+    } else {
+      stopScanner();
+    }
+  }, [showQR]);
 
   const fetchUserAndRole = async () => {
     const {
@@ -130,18 +137,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleScan = async (data: string | null) => {
-    if (data) {
-      const eventId = data;
-      handleAttendance(eventId, "confirmed");
-      setShowQR(false);
-    }
-  };
-
-  const handleError = (err: any) => {
-    console.error("Error escaneando código QR:", err);
-  };
-
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -151,9 +146,38 @@ export default function DashboardPage() {
     }
   };
 
+  const startScanner = () => {
+  if (!scannerRef.current) {
+    scannerRef.current = new Html5QrcodeScanner(
+      "qr-reader",
+      { fps: 10, qrbox: 250 },
+      false // <- este es el parámetro faltante
+    );
+
+    scannerRef.current.render(
+      (decodedText: string) => {
+        handleAttendance(decodedText, "confirmed");
+        setShowQR(false);
+      },
+      (error: any) => {
+        console.warn("Error escaneando código:", error);
+      }
+    );
+  }
+};
+
+  const stopScanner = () => {
+    if (scannerRef.current) {
+      scannerRef.current.clear().catch((error: any) => {
+        console.error("Error al detener el escáner:", error);
+      });
+      scannerRef.current = null;
+    }
+  };
+
   return (
     <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen">
-      {/* ... otros elementos omitidos por brevedad ... */}
+      {/* Aquí irían los demás componentes de la app */}
 
       {showQR && (
         <div className="mt-6 flex justify-center">
@@ -161,16 +185,7 @@ export default function DashboardPage() {
             <h3 className="text-center text-lg font-semibold mb-4">
               Escanea el código QR
             </h3>
-            <QrScanner
-              delay={300}
-              onError={handleError}
-              onScan={(result: any) => {
-                if (result?.text) {
-                  handleScan(result.text);
-                }
-              }}
-              style={{ width: "100%" }}
-            />
+            <div id="qr-reader" className="w-full" />
             <button
               onClick={() => setShowQR(false)}
               className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full"
@@ -180,8 +195,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
-      {/* ... resto del JSX ... */}
     </div>
   );
 }
