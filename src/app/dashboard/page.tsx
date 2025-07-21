@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -35,7 +36,7 @@ export default function DashboardPage() {
     if (user) {
       setUserEmail(user.email || "");
       const { data, error } = await supabase
-        .from("users")
+        .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
@@ -47,6 +48,8 @@ export default function DashboardPage() {
       }
     }
   };
+
+// ... OMITIDO PARA CONTINUAR EN SIGUIENTE BLOQUE ...
 
   const fetchEvents = async () => {
     const today = new Date().toISOString().split("T")[0];
@@ -64,34 +67,18 @@ export default function DashboardPage() {
   };
 
   const handleAddEvent = async () => {
-    if (editingId) {
-      const { error } = await supabase
-        .from("events")
-        .update({ title, description, date })
-        .eq("id", editingId);
+    const { error } = editingId
+      ? await supabase.from("events").update({ title, description, date }).eq("id", editingId)
+      : await supabase.from("events").insert([{ title, description, date }]);
 
-      if (error) {
-        console.error("Error actualizando evento:", error.message);
-      } else {
-        setEditingId(null);
-        setTitle("");
-        setDescription("");
-        setDate("");
-        fetchEvents();
-      }
+    if (error) {
+      console.error("Error guardando evento:", error.message);
     } else {
-      const { error } = await supabase.from("events").insert([
-        { title, description, date },
-      ]);
-
-      if (error) {
-        console.error("Error agregando evento:", error.message);
-      } else {
-        setTitle("");
-        setDescription("");
-        setDate("");
-        fetchEvents();
-      }
+      setTitle("");
+      setDescription("");
+      setDate("");
+      setEditingId(null);
+      fetchEvents();
     }
   };
 
@@ -115,8 +102,8 @@ export default function DashboardPage() {
     const { error } = await supabase.from("attendance").upsert({
       user_id: user.id,
       event_id: eventId,
-      status: status,
-      timestamp: null,
+      status,
+      timestamp: new Date().toISOString(),
       points_awarded: null,
     });
 
@@ -170,6 +157,10 @@ export default function DashboardPage() {
         </p>
       )}
 
+      <p className="text-center italic text-pink-600 mb-6">
+        “No vendemos destinos... Creamos caminos”
+      </p>
+
       <h2 className="text-2xl font-bold mb-4 text-black text-center flex items-center justify-center gap-2">
         📆 Eventos
       </h2>
@@ -193,17 +184,12 @@ export default function DashboardPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <div className="relative mb-2">
-            <input
-              type="date"
-              className="appearance-none border p-2 pr-10 w-full rounded text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c83b94] focus:border-transparent"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 text-sm">
-              📅
-            </div>
-          </div>
+          <input
+            type="date"
+            className="border p-2 w-full mb-2 rounded text-gray-800 bg-white"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
           <button
             className="bg-[#c83b94] text-white px-4 py-2 rounded w-full sm:w-auto hover:bg-[#a72d7a]"
             onClick={handleAddEvent}
@@ -301,34 +287,10 @@ export default function DashboardPage() {
       <div className="mt-10 text-center bg-gray-200 p-6 rounded-2xl shadow-md">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">📲 Síguenos en redes</h2>
         <div className="flex justify-center gap-6 text-2xl">
-          <a
-            href="https://www.instagram.com/yeahglobaleducation/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            📸
-          </a>
-          <a
-            href="https://www.tiktok.com/@yeahglobaleducation"
-            target="_blank"
-            rel="noreferrer"
-          >
-            🎵
-          </a>
-          <a
-            href="https://wa.me/+61424075119"
-            target="_blank"
-            rel="noreferrer"
-          >
-            💬
-          </a>
-          <a
-            href="https://www.youtube.com/@yeaheducation5334"
-            target="_blank"
-            rel="noreferrer"
-          >
-            ▶️
-          </a>
+          <a href="https://www.instagram.com/yeahglobaleducation/" target="_blank" rel="noreferrer">📸</a>
+          <a href="https://www.tiktok.com/@yeahglobaleducation" target="_blank" rel="noreferrer">🎵</a>
+          <a href="https://wa.me/+61424075119" target="_blank" rel="noreferrer">💬</a>
+          <a href="https://www.youtube.com/@yeaheducation5334" target="_blank" rel="noreferrer">▶️</a>
         </div>
       </div>
     </div>
