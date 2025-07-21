@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import dynamic from "next/dynamic";
+
+const Html5QrcodePlugin = dynamic(() => import("./Html5QrcodePlugin"), {
+  ssr: false,
+});
 
 interface Event {
   id: string;
@@ -21,20 +25,11 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [showQR, setShowQR] = useState(false);
-  const scannerRef = useRef<any>(null);
 
   useEffect(() => {
     fetchUserAndRole();
     fetchEvents();
   }, []);
-
-  useEffect(() => {
-    if (showQR) {
-      startScanner();
-    } else {
-      stopScanner();
-    }
-  }, [showQR]);
 
   const fetchUserAndRole = async () => {
     const {
@@ -137,6 +132,11 @@ export default function DashboardPage() {
     }
   };
 
+  const handleScan = (decodedText: string) => {
+    handleAttendance(decodedText, "confirmed");
+    setShowQR(false);
+  };
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -146,55 +146,123 @@ export default function DashboardPage() {
     }
   };
 
-  const startScanner = () => {
-  if (!scannerRef.current) {
-    scannerRef.current = new Html5QrcodeScanner(
-      "qr-reader",
-      { fps: 10, qrbox: 250 },
-      false // <- este es el parámetro faltante
-    );
-
-    scannerRef.current.render(
-      (decodedText: string) => {
-        handleAttendance(decodedText, "confirmed");
-        setShowQR(false);
-      },
-      (error: any) => {
-        console.warn("Error escaneando código:", error);
-      }
-    );
-  }
-};
-
-  const stopScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.clear().catch((error: any) => {
-        console.error("Error al detener el escáner:", error);
-      });
-      scannerRef.current = null;
-    }
-  };
-
   return (
     <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen">
-      {/* Aquí irían los demás componentes de la app */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#0e5d6d]">
+            Bienvenido, {userEmail}
+          </h1>
+          <Image src="/isologo-yeah.png" alt="Isologo Yeah" width={40} height={40} />
+        </div>
+        <button
+          onClick={handleLogout}
+          className="bg-[#c83b94] text-white px-4 py-1 rounded hover:bg-[#a72d7a] text-sm"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+
+      <h2 className="text-2xl font-bold mb-4 text-black text-center">📆 Eventos</h2>
+
+      {role === "admin" && (
+        <div className="bg-white p-4 rounded-xl shadow mb-6">
+          <h3 className="text-xl font-semibold mb-2">
+            {editingId ? "Editar evento" : "Agregar nuevo evento"}
+          </h3>
+          <input
+            type="text"
+            placeholder="Título"
+            className="border p-2 w-full mb-2 rounded"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Descripción"
+            className="border p-2 w-full mb-2 rounded"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <input
+            type="date"
+            className="border p-2 w-full mb-2 rounded"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+          <button
+            className="bg-[#c83b94] text-white px-4 py-2 rounded"
+            onClick={handleAddEvent}
+          >
+            {editingId ? "Guardar cambios" : "Agregar Evento"}
+          </button>
+        </div>
+      )}
+
+      <div className="grid gap-4">
+        {events.map((event) => (
+          <div key={event.id} className="bg-white p-4 rounded-xl shadow">
+            <h3 className="text-xl font-bold">{event.title}</h3>
+            <p>{event.description}</p>
+            <p className="text-sm">{event.date}</p>
+            {role === "admin" && (
+              <button
+                onClick={() => handleEdit(event)}
+                className="text-sm text-yellow-600 underline mt-2"
+              >
+                Editar
+              </button>
+            )}
+            {role === "student" && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  onClick={() => handleAttendance(event.id, "pending")}
+                  className="bg-green-600 text-white px-3 py-1 rounded text-sm"
+                >
+                  Asistiré
+                </button>
+                <button
+                  onClick={() => handleAttendance(event.id, "rejected")}
+                  className="bg-gray-400 text-white px-3 py-1 rounded text-sm"
+                >
+                  No puedo
+                </button>
+                <button
+                  onClick={() => setShowQR(true)}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                >
+                  Escanear QR
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
       {showQR && (
         <div className="mt-6 flex justify-center">
           <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
-            <h3 className="text-center text-lg font-semibold mb-4">
-              Escanea el código QR
-            </h3>
-            <div id="qr-reader" className="w-full" />
+            <h3 className="text-center text-lg font-semibold mb-4">Escanea el código QR</h3>
+            <Html5QrcodePlugin onScan={handleScan} />
             <button
               onClick={() => setShowQR(false)}
-              className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full"
+              className="mt-4 bg-gray-500 text-white px-4 py-2 rounded w-full"
             >
               Cancelar
             </button>
           </div>
         </div>
       )}
+
+      <div className="mt-10 text-center bg-gray-200 p-6 rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">📲 Síguenos en redes</h2>
+        <div className="flex justify-center gap-6 text-2xl">
+          <a href="https://www.instagram.com/yeahglobaleducation/" target="_blank">📸</a>
+          <a href="https://www.tiktok.com/@yeahglobaleducation" target="_blank">🎵</a>
+          <a href="https://wa.me/+61424075119" target="_blank">💬</a>
+          <a href="https://www.youtube.com/@yeaheducation5334" target="_blank">▶️</a>
+        </div>
+      </div>
     </div>
   );
 }
