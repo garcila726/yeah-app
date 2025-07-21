@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
-import QrReader from "react-qr-reader";
+import QrReader from "react-qr-scanner";
 
 interface Event {
   id: string;
@@ -264,17 +264,27 @@ export default function DashboardPage() {
 
       {showQR && (
         <div className="mt-6 flex justify-center">
-          <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
-            <h3 className="text-center text-lg font-semibold mb-4">Escanea el código QR</h3>
-            <QrReader delay={300} onError={handleError} onScan={handleScan} style={{ width: "100%" }} />
-            <button
-              onClick={() => setShowQR(false)}
-              className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
+  <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
+    <h3 className="text-center text-lg font-semibold mb-4">Escanea el código QR</h3>
+    <QrReader
+      delay={300}
+      style={{ width: "100%" }}
+      onError={handleError}
+      onScan={(result: any) => {
+        if (result?.text) {
+          handleScan(result.text);
+        }
+      }}
+    />
+    <button
+      onClick={() => setShowQR(false)}
+      className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full"
+    >
+      Cancelar
+    </button>
+  </div>
+</div>
+
       )}
 
       <hr className="my-10 border-t-2 border-[#2a96af]" />
@@ -341,4 +351,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
