@@ -1,10 +1,14 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
 import Html5QrcodePlugin from "./Html5QrcodePlugin";
+import InstagramIcon from '/icons/instagram.png';
+import TikTokIcon from '/icons/tiktok.png';
+import WhatsAppIcon from '/icons/whatsapp.png';
+import YouTubeIcon from '/icons/youtube.png';
+
 
 interface Event {
   id: string;
@@ -22,34 +26,43 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [showQR, setShowQR] = useState(false);
+  const [attendedEvents, setAttendedEvents] = useState<string[]>([]);
+
 
   useEffect(() => {
     fetchUserAndRole();
     fetchEvents();
+    testConnection();
   }, []);
 
   const fetchUserAndRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    if (user) {
+      if (userError) throw userError;
+      if (!user) throw new Error("No hay usuario autenticado");
+
       setUserEmail(user.email || "");
+
       const { data, error } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Error fetching role:", error.message);
-      } else {
-        setRole(data?.role);
+      if (error || !data) {
+        console.warn("⚠️ No se encontró el perfil o hubo un error:", error);
+        return;
       }
+
+      setRole(data.role);
+    } catch (err) {
+      console.error("❌ Error en fetchUserAndRole:", err);
     }
   };
-
-// ... OMITIDO PARA CONTINUAR EN SIGUIENTE BLOQUE ...
 
   const fetchEvents = async () => {
     const today = new Date().toISOString().split("T")[0];
@@ -64,6 +77,21 @@ export default function DashboardPage() {
     } else {
       setEvents(data || []);
     }
+
+    const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+  const { data: attendanceData } = await supabase
+    .from("attendance")
+    .select("event_id")
+    .eq("user_id", user.id)
+    .eq("status", "confirmed");
+
+  if (attendanceData) {
+    const attendedIds = attendanceData.map((row) => row.event_id);
+    setAttendedEvents(attendedIds);
+  }
+}
+
   };
 
   const handleAddEvent = async () => {
@@ -99,21 +127,59 @@ export default function DashboardPage() {
       return;
     }
 
-    const { error } = await supabase.from("attendance").upsert({
+    // Verificar si ya existe registro
+    const { data: existing, error: checkError } = await supabase
+      .from("attendance")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Error verificando asistencia previa:", checkError.message);
+      alert("Hubo un error al verificar tu asistencia.");
+      return;
+    }
+
+    if (existing) {
+      alert("❗Ya estás registrado para este evento.");
+      return;
+    }
+
+    const attendanceData = {
       user_id: user.id,
       event_id: eventId,
       status,
       timestamp: new Date().toISOString(),
-      points_awarded: null,
-    });
+      points_awarded: status === "confirmed" ? 10 : 0,
+    };
+
+    const { error } = await supabase.from("attendance").insert([attendanceData]);
 
     if (error) {
-      console.error("Error registrando asistencia:", error.message);
+      console.error("❌ Error registrando asistencia:", error.message);
       alert("No se pudo registrar la asistencia.");
     } else {
-      alert("¡Tu respuesta ha sido registrada!");
+      alert("✅ ¡Tu respuesta ha sido registrada!");
     }
   };
+
+  const hasAlreadyAttended = async (eventId: string): Promise<boolean> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from("attendance")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("event_id", eventId)
+    .eq("status", "confirmed")
+    .single();
+
+  return !!data;
+};
+
+
 
   const handleScan = async (data: string) => {
     if (data) {
@@ -130,6 +196,36 @@ export default function DashboardPage() {
       window.location.href = "/";
     }
   };
+
+  const testConnection = async () => {
+    const { data, error } = await supabase.from("attendance").select("*").limit(1);
+    console.log("🔌 Test conexión Supabase:", { data, error });
+  };
+
+  const handleDeleteAttendance = async (eventId: string) => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    alert("Debes iniciar sesión para eliminar asistencia.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("attendance")
+    .delete()
+    .eq("event_id", eventId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("❌ Error al eliminar asistencia:", error.message);
+    alert("No se pudo eliminar la asistencia.");
+  } else {
+    alert("✅ Asistencia eliminada correctamente.");
+  }
+};
+
 
   return (
     <div className="px-4 sm:px-6 py-6 bg-gray-100 min-h-screen">
@@ -157,9 +253,6 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <p className="text-center italic text-pink-600 mb-6">
-        “No vendemos destinos... Creamos caminos”
-      </p>
 
       <h2 className="text-2xl font-bold mb-4 text-black text-center flex items-center justify-center gap-2">
         📆 Eventos
@@ -214,27 +307,34 @@ export default function DashboardPage() {
               </button>
             )}
             {role === "student" && (
-              <div className="mt-3 flex flex-wrap gap-3">
-                <button
-                  onClick={() => handleAttendance(event.id, "pending")}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                >
-                  Asistiré
-                </button>
-                <button
-                  onClick={() => handleAttendance(event.id, "rejected")}
-                  className="bg-gray-400 text-white px-3 py-1 rounded text-sm hover:bg-gray-500"
-                >
-                  No puedo
-                </button>
-                <button
-                  onClick={() => setShowQR(true)}
-                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                >
-                  Escanear QR
-                </button>
-              </div>
-            )}
+  <div className="mt-3 flex flex-wrap gap-3">
+    {attendedEvents.includes(event.id) ? (
+      <p className="text-green-600 font-semibold">✅ Ya registraste tu asistencia</p>
+    ) : (
+      <>
+        <button
+          onClick={() => handleAttendance(event.id, "pending")}
+          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+        >
+          Asistiré
+        </button>
+        <button
+          onClick={() => handleAttendance(event.id, "rejected")}
+          className="bg-gray-400 text-white px-3 py-1 rounded text-sm hover:bg-gray-500"
+        >
+          No puedo
+        </button>
+        <button
+          onClick={() => setShowQR(true)}
+          className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+        >
+          Escanear QR
+        </button>
+      </>
+    )}
+  </div>
+)}
+
           </div>
         ))}
       </div>
@@ -284,15 +384,31 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-10 text-center bg-gray-200 p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">📲 Síguenos en redes</h2>
-        <div className="flex justify-center gap-6 text-2xl">
-          <a href="https://www.instagram.com/yeahglobaleducation/" target="_blank" rel="noreferrer">📸</a>
-          <a href="https://www.tiktok.com/@yeahglobaleducation" target="_blank" rel="noreferrer">🎵</a>
-          <a href="https://wa.me/+61424075119" target="_blank" rel="noreferrer">💬</a>
-          <a href="https://www.youtube.com/@yeaheducation5334" target="_blank" rel="noreferrer">▶️</a>
-        </div>
-      </div>
+     <div className="mt-10 text-center bg-gray-200 p-6 rounded-2xl shadow-md">
+  <h2 className="text-2xl font-bold mb-4 text-gray-800">📲 Síguenos en redes</h2>
+<div className="flex justify-center gap-6">
+  <a href="https://www.instagram.com/yeahglobaleducation/" target="_blank" rel="noreferrer">
+    <Image src="/icons/instagram.png" alt="Instagram" width={30} height={30} />
+  </a>
+  <a href="https://www.tiktok.com/@yeahglobaleducation" target="_blank" rel="noreferrer">
+    <Image src="/icons/tiktok.png" alt="TikTok" width={30} height={30} />
+  </a>
+  <a href="https://wa.me/+61424075119" target="_blank" rel="noreferrer">
+    <Image src="/icons/whatsapp.png" alt="WhatsApp" width={30} height={30} />
+  </a>
+  <a href="https://www.youtube.com/@yeaheducation5334" target="_blank" rel="noreferrer">
+    <Image src="/icons/youtube.png" alt="YouTube" width={30} height={30} />
+  </a>
+</div>
+
+
+  {/* ✅ Aquí dentro del mismo bloque visual */}
+  <p className="text-center italic text-pink-600 mt-6">
+    “No vendemos destinos... Creamos caminos”
+  </p>
+</div>
+
+      
     </div>
   );
 }
