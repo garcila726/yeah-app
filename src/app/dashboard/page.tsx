@@ -27,13 +27,40 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [showQR, setShowQR] = useState(false);
   const [attendedEvents, setAttendedEvents] = useState<string[]>([]);
+  const [completedEvents, setCompletedEvents] = useState<string[]>([]);
+  const [respondedEvents, setRespondedEvents] = useState<Record<string, string>>({});
+  const [totalPoints, setTotalPoints] = useState<number>(0);
+
+
 
 
   useEffect(() => {
     fetchUserAndRole();
     fetchEvents();
     testConnection();
+    fetchRespondedEvents();
+    fetchTotalPoints();
+
   }, []);
+
+    const fetchRespondedEvents = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("attendance")
+      .select("event_id, status")
+      .eq("user_id", user.id);
+
+    if (!error && data) {
+      const responded = data.reduce((acc: Record<string, string>, item) => {
+        acc[item.event_id] = item.status;
+        return acc;
+      }, {});
+      setRespondedEvents(responded); // ⬅️ Este nuevo estado lo creamos abajo
+    }
+  };
+
 
   const fetchUserAndRole = async () => {
     try {
@@ -82,17 +109,49 @@ export default function DashboardPage() {
 if (user) {
   const { data: attendanceData } = await supabase
     .from("attendance")
-    .select("event_id")
-    .eq("user_id", user.id)
-    .eq("status", "confirmed");
+    .select("event_id, status, points_awarded")
+    .eq("user_id", user.id);
 
   if (attendanceData) {
-    const attendedIds = attendanceData.map((row) => row.event_id);
+    const responded: { [key: string]: string } = {};
+    const completed: string[] = [];
+    const attendedIds: string[] = [];
+
+    attendanceData.forEach((row) => {
+      responded[row.event_id] = row.status;
+      if (row.status === "confirmed") attendedIds.push(row.event_id);
+      if (row.status === "confirmed" && row.points_awarded === 10) {
+        completed.push(row.event_id);
+      }
+    });
+
+    setRespondedEvents(responded);
     setAttendedEvents(attendedIds);
+    setCompletedEvents(completed);
   }
 }
 
+
   };
+
+  const fetchTotalPoints = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data, error } = await supabase
+    .from("attendance")
+    .select("points_awarded")
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Error al obtener puntos:", error.message);
+    return;
+  }
+
+  const total = data?.reduce((sum, row) => sum + (row.points_awarded || 0), 0);
+  setTotalPoints(total || 0);
+};
+
 
   const handleAddEvent = async () => {
     const { error } = editingId
@@ -108,7 +167,7 @@ if (user) {
       setEditingId(null);
       fetchEvents();
     }
-  };
+   };
 
   const handleEdit = (event: Event) => {
     setEditingId(event.id);
@@ -129,11 +188,11 @@ if (user) {
 
     // Verificar si ya existe registro
     const { data: existing, error: checkError } = await supabase
-      .from("attendance")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("event_id", eventId)
-      .maybeSingle();
+  .from("attendance")
+  .select("event_id") // ✅ usamos un campo que sí existe
+  .eq("user_id", user.id)
+  .eq("event_id", eventId)
+  .maybeSingle();
 
     if (checkError) {
       console.error("Error verificando asistencia previa:", checkError.message);
@@ -151,7 +210,7 @@ if (user) {
       event_id: eventId,
       status,
       timestamp: new Date().toISOString(),
-      points_awarded: status === "confirmed" ? 10 : 0,
+      points_awarded: 0, // Se asignan los puntos solo al escanear QR
     };
 
     const { error } = await supabase.from("attendance").insert([attendanceData]);
@@ -181,17 +240,48 @@ if (user) {
 
 
 
-  const handleScan = async (data: string) => {
-    if (data) {
-      handleAttendance(data, "confirmed");
-      setShowQR(false);
-    }
-  };
+const handleScan = async (data: string) => {
+  if (!data) return;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Validar si ya tiene puntos
+  const { data: existing } = await supabase
+    .from("attendance")
+    .select("points_awarded")
+    .eq("user_id", user.id)
+    .eq("event_id", data)
+    .single();
+
+  if (existing?.points_awarded === 10) {
+    alert("✅ Ya registraste tu asistencia con QR.");
+    setShowQR(false);
+    return;
+  }
+
+  const { error } = await supabase
+    .from("attendance")
+    .update({ points_awarded: 10 })
+    .eq("user_id", user.id)
+    .eq("event_id", data);
+
+  if (error) {
+    console.error("❌ Error al registrar QR:", error.message);
+    alert("Error al registrar QR.");
+  } else {
+    alert("🎉 ¡Asistencia confirmada y 10 puntos otorgados!");
+    fetchEvents(); // Actualiza estados
+    setShowQR(false);
+  }
+};
+
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error("Error al cerrar sesión:", error.message);
+    console.error("Error al cerrar sesión:", error.message);
+
     } else {
       window.location.href = "/";
     }
@@ -245,14 +335,22 @@ if (user) {
       </div>
 
       {role && (
-        <p className="text-sm text-gray-700 mb-6 text-center sm:text-left">
-          Rol actual:{" "}
-          <span className={`font-semibold ${role === "admin" ? "text-green-600" : "text-blue-600"}`}>
-            {role}
-          </span>
-        </p>
-      )}
+  <>
+    <p className="text-sm text-gray-700 mb-1 text-center sm:text-left">
+      Rol actual:{" "}
+      <span className={`font-semibold ${role === "admin" ? "text-green-600" : "text-blue-600"}`}>
+        {role}
+      </span>
+    </p>
+    <div className="text-sm text-center sm:text-left font-semibold text-green-700 mb-6">
+      🌱 Puntos acumulados: {totalPoints}
+    </div>
+  </>
+)}
 
+        
+      )}
+    
 
       <h2 className="text-2xl font-bold mb-4 text-black text-center flex items-center justify-center gap-2">
         📆 Eventos
@@ -293,7 +391,10 @@ if (user) {
       )}
 
       <div className="grid gap-4">
-        {events.map((event) => (
+        {events
+  .filter((event) => respondedEvents[event.id] !== "rejected") // 👈 Ocultar eventos rechazados
+  .map((event) => (
+
           <div key={event.id} className="bg-white text-gray-800 p-4 rounded-xl shadow">
             <h3 className="text-xl font-bold">{event.title}</h3>
             <p>{event.description}</p>
@@ -308,12 +409,22 @@ if (user) {
             )}
             {role === "student" && (
   <div className="mt-3 flex flex-wrap gap-3">
-    {attendedEvents.includes(event.id) ? (
-      <p className="text-green-600 font-semibold">✅ Ya registraste tu asistencia</p>
+    {completedEvents.includes(event.id) ? (
+      <p className="text-green-600 font-semibold">🎉 Asistencia completada</p>
+    ) : respondedEvents[event.id] === "confirmed" ? (
+      <>
+        <p className="text-green-600 font-semibold">✅ Confirmado</p>
+        <button
+          onClick={() => setShowQR(true)}
+          className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+        >
+          Escanear QR
+        </button>
+      </>
     ) : (
       <>
         <button
-          onClick={() => handleAttendance(event.id, "pending")}
+          onClick={() => handleAttendance(event.id, "confirmed")}
           className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
         >
           Asistiré
@@ -324,16 +435,11 @@ if (user) {
         >
           No puedo
         </button>
-        <button
-          onClick={() => setShowQR(true)}
-          className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-        >
-          Escanear QR
-        </button>
       </>
     )}
   </div>
 )}
+
 
           </div>
         ))}
@@ -365,9 +471,9 @@ if (user) {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-[#2a96af]">
-              10% de descuento en cursos de inglés
+              Grandes Sorpresas
             </h3>
-            <p className="text-sm text-gray-600">Válido en escuelas aliadas.</p>
+            <p className="text-sm text-gray-600">Todo el año para nuestros usuarios activos</p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow">
             <h3 className="text-lg font-bold text-[#2a96af]">Eventos VIP</h3>
@@ -403,7 +509,7 @@ if (user) {
 
 
   {/* ✅ Aquí dentro del mismo bloque visual */}
-  <p className="text-center italic text-pink-600 mt-6">
+  <p className="text-sm text-[#2a96af]">
     “No vendemos destinos... Creamos caminos”
   </p>
 </div>
