@@ -348,9 +348,6 @@ const handleScan = async (data: string) => {
   </>
 )}
 
-        
-      )}
-    
 
       <h2 className="text-2xl font-bold mb-4 text-black text-center flex items-center justify-center gap-2">
         📆 Eventos
