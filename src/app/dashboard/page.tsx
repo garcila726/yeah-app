@@ -241,38 +241,59 @@ if (user) {
 
 
 const handleScan = async (data: string) => {
-  if (!data) return;
+  try {
+    if (!data) return;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return;
 
-  // Validar si ya tiene puntos
-  const { data: existing } = await supabase
-    .from("attendance")
-    .select("points_awarded")
-    .eq("user_id", user.id)
-    .eq("event_id", data)
-    .single();
+    // Consultar si ya registró asistencia
+    const { data: existing, error: queryError } = await supabase
+      .from("attendance")
+      .select("points_awarded, status")
+      .eq("user_id", user.id)
+      .eq("event_id", data)
+      .maybeSingle();
 
-  if (existing?.points_awarded === 10) {
-    alert("✅ Ya registraste tu asistencia con QR.");
-    setShowQR(false);
-    return;
-  }
+    if (queryError) {
+      console.error("Error verificando asistencia:", queryError);
+      return;
+    }
 
-  const { error } = await supabase
-    .from("attendance")
-    .update({ points_awarded: 10 })
-    .eq("user_id", user.id)
-    .eq("event_id", data);
+    // Verificar si ya asistió (no solo si existe la fila)
+    if (existing && existing.status === "attended" && existing.points_awarded > 0) {
+      alert("✅ Ya registraste tu asistencia anteriormente.");
+      return;
+    }
 
-  if (error) {
-    console.error("❌ Error al registrar QR:", error.message);
-    alert("Error al registrar QR.");
-  } else {
-    alert("🎉 ¡Asistencia confirmada y 10 puntos otorgados!");
-    fetchEvents(); // Actualiza estados
-    setShowQR(false);
+    // Si no ha asistido, registrar asistencia
+    const { error: insertError } = await supabase.from("attendance").upsert({
+      user_id: user.id,
+      event_id: data,
+      status: "attended",
+      timestamp: new Date().toISOString(),
+      points_awarded: 10,
+    });
+
+    if (insertError) {
+      console.error("Error al guardar la asistencia:", insertError);
+      return;
+    }
+
+    alert("✅ Asistencia registrada con éxito.");
+
+  } catch (err) {
+    console.error("Error durante el escaneo:", err);
+  } finally {
+    // Detener el escáner de forma segura
+    const scanner = document.getElementById("html5qr-code-full-region");
+    if (scanner) {
+      try {
+        scanner.innerHTML = "";
+      } catch (e) {
+        console.warn("No se pudo limpiar el escáner:", e);
+      }
+    }
   }
 };
 

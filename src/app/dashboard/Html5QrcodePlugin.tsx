@@ -7,33 +7,49 @@ interface Html5QrcodePluginProps {
 
 export default function Html5QrcodePlugin({ onScan }: Html5QrcodePluginProps) {
   const qrRef = useRef<HTMLDivElement>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null); // Aquí guardamos el escáner
 
   useEffect(() => {
     const qrRegionId = "html5qr-code-full-region";
-
     if (!qrRef.current) return;
 
     const html5QrCode = new Html5Qrcode(qrRegionId);
-    const config = { fps: 10, qrbox: 250 };
+    scannerRef.current = html5QrCode;
 
     html5QrCode
       .start(
         { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          html5QrCode.stop();
-          onScan(decodedText);
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
         },
-        (error) => {
-          console.warn("QR error:", error);
+        async (decodedText) => {
+          await onScan(decodedText);
+
+          // ✅ Detenemos el escáner correctamente para evitar bucles infinitos
+          try {
+            await html5QrCode.stop();
+            html5QrCode.clear();
+          } catch (err) {
+            console.error("Error al detener el escáner:", err);
+          }
+        },
+        (errorMessage) => {
+          // Puedes silenciar o mostrar errores de escaneo aquí
         }
       )
       .catch((err) => {
-        console.error("Unable to start scanning", err);
+        console.error("Error al iniciar el escáner:", err);
       });
 
+    // Cleanup al desmontar el componente
     return () => {
-      html5QrCode.stop().catch((err) => console.error("Stop failed", err));
+      if (scannerRef.current?.isScanning) {
+        scannerRef.current
+          .stop()
+          .then(() => scannerRef.current?.clear())
+          .catch(() => {});
+      }
     };
   }, [onScan]);
 
